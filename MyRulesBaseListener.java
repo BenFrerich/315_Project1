@@ -12,8 +12,8 @@ public class MyRulesBaseListener extends RulesBaseListener{
     }
 
     @Override public void exitSelection(RulesParser.SelectionContext ctx) {
-        ParseTree conditionNode = ctx.getChild(1);
-        System.out.println(ctx.getChild(0).getText());
+
+        ParseTree conditionNode = ctx.getChild(2);
         ParseTree expresionNode = ctx.getChild(4);
         List<String> conditionLeaves = new ArrayList<>();
         getLeafNodes(conditionNode,conditionLeaves);
@@ -74,22 +74,14 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 expressionQueue.add(value);
             }
         }
-        /*
-        System.out.println("expresionLeaves:");
-        System.out.println(expresionLeaves);
-        System.out.println("expressionOpStack:");
-        System.out.println(expressionOpStack);
-        System.out.println("expressionQueue:");
-        System.out.println(expressionQueue);
-        */
 
+        //System.out.println(expresionLeaves);
+        //System.out.println(expressionOpStack);
+        //System.out.println(expressionQueue);
     }
 
     @Override public void exitShow_cmd(RulesParser.Show_cmdContext ctx) {
-        System.out.println(ctx.getChild(0).getText());
         System.out.println("SHOW");
-//        System.out.println(ctx);
-//        ctx.printTable();
     }
 
     public void getLeafNodes(ParseTree node, List<String> leaves)
@@ -124,4 +116,6 @@ public class MyRulesBaseListener extends RulesBaseListener{
         }
         else return value.equals("+") || value.equals("-") || value.equals("*") || value.equals("(") || value.equals(")");
     }
+
+
 }
