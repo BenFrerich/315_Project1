@@ -1,6 +1,7 @@
 package project1;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.lang.reflect.Array;
 import java.util.*;
 
 import project1.antlr4.MyRulesBaseListener;
@@ -27,10 +28,8 @@ public class Main {
             RulesLexer lexer = new RulesLexer(charStream);
             CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
             RulesParser parser = new RulesParser(commonTokenStream);
-
             lexer.removeErrorListeners();
             parser.removeErrorListeners();
-
             RulesParser.ProgramContext programContext = parser.program();
             ParseTreeWalker walker = new ParseTreeWalker();
             MyRulesBaseListener listener = new MyRulesBaseListener();
@@ -38,61 +37,86 @@ public class Main {
 
         }
 
-        Table temp1 = new Table(3);
-        ArrayList<String> labels = new ArrayList<String>(Arrays.asList("Name", "Kind", "Years"));
-        temp1.insertRow(labels);
-        ArrayList<String> row11 = new ArrayList<String>(Arrays.asList("Joe", "Dog", "10"));
-        ArrayList<String> row12 = new ArrayList<String>(Arrays.asList("Ben", "Cat", "11"));
-        ArrayList<String> row13 = new ArrayList<String>(Arrays.asList("Chris", "Bird", "120"));
-        ArrayList<String> row14 = new ArrayList<String>(Arrays.asList("Brandon", "Dog", "140"));
-        ArrayList<String> row15 = new ArrayList<String>(Arrays.asList("John", "Lizard", "1"));
-        ArrayList<String> row16 = new ArrayList<String>(Arrays.asList("Beatrish", "Dog", "7"));
-        ArrayList<String> row17 = new ArrayList<String>(Arrays.asList("Pual", "Cat", "76"));
-        temp1.insertRow(row11);
-        temp1.insertRow(row12);
-        temp1.insertRow(row13);
-        temp1.insertRow(row14);
-        temp1.insertRow(row15);
-        temp1.insertRow(row16);
-        temp1.insertRow(row17);
-
-
-        Table temp2 = new Table(3);
-        ArrayList<String> labels2 = new ArrayList<String>(Arrays.asList("Name", "Kind", "Years"));
-        temp2.insertRow(labels2);
-        ArrayList<String> row22 = new ArrayList<String>(Arrays.asList("Billy", "Cat", "45"));
-        temp2.insertRow(row22);
+        /*
+        Table animals = new Table(3);
+        ArrayList<String> labels = new ArrayList<String>(Arrays.asList("name", "kind", "years"));
+        animals.insertRow(labels);
+        ArrayList<Object> row2 = new ArrayList<Object>(Arrays.asList("Joe", "cat", 4));
+        animals.insertRow(row2);
+        ArrayList<Object> row3 = new ArrayList<Object>(Arrays.asList("Spot", "dog", 10));
+        animals.insertRow(row3);
+        ArrayList<Object> row4 = new ArrayList<Object>(Arrays.asList("Snoopy", "dog", 3));
+        animals.insertRow(row4);
+        ArrayList<Object> row5 = new ArrayList<Object>(Arrays.asList("Tweety", "bird", 1));
+        animals.insertRow(row5);
+        ArrayList<Object> row6 = new ArrayList<Object>(Arrays.asList("Joe", "bird", 2));
+        animals.insertRow(row6);
+        ArrayList<Object> col1 = new ArrayList<>(Arrays.asList("aname", "Joe", "NOT", "Snoopy", "NOT" , "NOT"));
+        animals.insertCol(col1);
 
         Dbms data = new Dbms();
+        data.addTable("animals" , animals);
+        data.printDataBase("animals");
+        System.out.println();
 
-        data.addTable("temp1" , temp1);
-        data.addTable("temp2" , temp2);
+        Table dogs = animals.select("kind","dog");
+        data.addTable("dogs",dogs);
+        data.printDataBase("dogs");
+        System.out.println();
 
-//        data.printDataBaseTest();
-//        data.deleteTable("temp1");
-//        data.printDataBaseTest();
+        Table oldDogs = dogs.select("year", ">", 10);
+        data.addTable("Old Dogs", oldDogs);
+        data.printDataBase("Old Dogs");
+        System.out.println();
 
-//        String[] name = new String[3];
-//        name[0] = "Name";
-//        name[1] = "Kind";
-//        name[2] = "Years";
-//
-//        String[] newName = new String[3];
-//        newName[0] = "newName";
-//        newName[1] = "newKind";
-//        newName[2] = "newYears";
-//
-//
-//        temp1.rename("temp1", temp1, name, newName);
+        Table temp1 = animals.select("kind","cat");
+        data.addTable("temp1",temp1);
+        Table catsOrDogs = data.union(dogs,temp1);
+        data.addTable("cats or dogs", catsOrDogs);
+        data.printDataBase("cats or dogs");
+        System.out.println();
 
-        String[] name = new String[2];
-        name[0] = "Cat";
-        name[1] = "Dog";
+        Table species = new Table(1);
+        ArrayList<String> label = new ArrayList<String>(Arrays.asList("kind"));
+        species.insertRow(label);
+        data.addTable("species", species);
+        data.insertCommand("species", "animals", label);
+        data.printDataBase("species");
+        System.out.println();
 
-        data.printDataBaseTest();
-        temp1.delete("temp1", temp1, name);
-        data.printDataBaseTest();
+        Table a = new Table();
+        ArrayList<Object> header = animals.project("name");
+        ArrayList<Object> header2 = animals.project("kind");
+        ArrayList<String> label3 = new ArrayList<String>(Arrays.asList("name","kind"));
+        ArrayList<String> label4 = new ArrayList<String>(Arrays.asList("aname","akind"));
+        a.insertCol(header);
+        a.insertCol(header2);
+        a.rename("a", a, label3,label4);
+        data.addTable("a",a);
+        data.printDataBase("a");
+        System.out.println();
+
+
+        Table commonNames = animals.select("name", "==", "aname");
+        data.addTable("common names", commonNames);
+        data.printDataBase("common names");
+        System.out.println();
+
+        Table answer = new Table(commonNames);
+        data.addTable("answer", answer);
+        data.printDataBase("answer");
+        System.out.println();
+
+
+
+        */
+
+
+
+
 
     }
 
 }
+
+
