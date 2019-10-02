@@ -3,9 +3,14 @@ import java.security.PublicKey;
 import java.util.*;
 
 public class Table<T> {
-    private String name;
-    private ArrayList<String> primaryKey;
+    public String name;
+    public ArrayList<String> primaryKey;
     public  ArrayList<ArrayList<T>> table;
+
+    public Table()
+    {
+        table = new ArrayList<ArrayList<T>>();
+    }
 
     public Table(int j)
     {
@@ -15,6 +20,22 @@ public class Table<T> {
             ArrayList<T> a = new ArrayList<T>();
             table.add(a);
         }
+    }
+
+    public Table(Table<T> t)
+    {
+        this.table = new ArrayList<ArrayList<T>>();
+        this.name = t.name;
+        this.primaryKey = t.primaryKey;
+        for(int i = 0; i < t.table.size(); i++)
+        {
+            table.add(new ArrayList<T>());
+            for(int j = 0; j < t.table.get(0).size(); j++)
+            {
+                table.get(i).add(t.table.get(i).get(j));
+            }
+        }
+
     }
 
     public void insertRow(ArrayList<T> inputs)
@@ -27,25 +48,51 @@ public class Table<T> {
         }
     }
 
+    public void insertCol(ArrayList<T> inputs)
+    {
+        table.add(inputs);
+    }
+
+    public void deleteRow(int index)
+    {
+        for(int i = 0; i < table.size(); i++)
+        {
+            table.get(i).remove(index);
+        }
+    }
+
+    public int getRowCount() {
+        return this.table.get(1).size();
+    }
+
+    public ArrayList<T> getRow(int index)
+    {
+        ArrayList<T> row = new ArrayList<T>();
+        for(ArrayList<T> col : this.table)
+        {
+            row.add(col.get(index));
+        }
+        return  row;
+    }
+
     public void printTable()
     {
-        for (int i = 0; i < table.size(); i++)
-        {
-            for (int j = 0; j < table.get(i).size(); j++)
-            {
-                System.out.print(table.get(i).get(j) + " ");
+        for (ArrayList<T> ts : table) {
+            for (T t : ts) {
+                System.out.print(t + " ");
             }
             System.out.println();
         }
     }
 
-    public Table where(String header, T key)
+    public Table<T> select(String header, T key)
     {
         int index = -1;
-        Table temp = new Table(this.table.size());
+        Table<T> temp = new Table<T>(this.table.size());
         ArrayList<T> a = new ArrayList<T>();
         ArrayList<Integer> b = new ArrayList<Integer>();
         ArrayList<T> c = new ArrayList<T>();
+
 
         for (ArrayList<T> tArrayList : this.table) {
             a.add(tArrayList.get(0));
@@ -91,67 +138,41 @@ public class Table<T> {
 
     }
 
-    public Table rename(String name, Table<T> t, String[] header, String[] newHeader) //  rename specified header(s)
+    public void SET(Integer index, T keys)
     {
-        for(int h = 0; h < header.length; h++)
+        for(int i = 1; i < table.get(0).size(); i++)
+        {
+            table.get(index).set(i,keys);
+        }
+    }
+
+    public ArrayList<T> project(String header) {
+        ArrayList<T> colWanted = new ArrayList<T>();
+        for (ArrayList<T> cols : table) {
+            if (cols.get(0) == header) {
+                colWanted = (ArrayList<T>) cols.clone();
+            }
+        }
+        return colWanted;
+    }
+
+    public Table rename(String name, Table<T> t, ArrayList<String> header, ArrayList<String> newHeader) //  rename specified header(s)
+    {
+        for(int h = 0; h < header.size(); h++)
         {
             for(int i = 0; i < t.table.size(); i++)
             {
                 for(int j = 1; j < t.table.get(i).size(); j++)
                 {
-                    if((String) table.get(i).get(0) == header[h])
+                    if((String) table.get(i).get(0) == header.get(h))
                     {
-                        table.get(i).set(0, (T) (newHeader[h]));
+                        table.get(i).set(0, (T) (newHeader.get(h)));
                     }
 
                 }
             }
         }
         return t;
-    }
-
-    public Table union(Table<T> t1, Table<T> t2)
-    {
-        Table<T> t3 = new Table<T>(t1.table.size());
-
-        if(t1.table.size() != t2.table.size())
-        {
-            System.out.println("Cannot union these tables, they contain a different number of columns");
-        }
-        else
-        {
-            //Headers
-            for(int i = 0; i < t1.table.size(); i++)
-            {
-                t3.table.get(i).add(t1.table.get(i).get(0));
-            }
-            //Add first table
-            for(int i = 0; i < t1.table.size(); i++)
-            {
-                for(int j = 1; j < t1.table.get(i).size(); j++)
-                {
-                    t3.table.get(i).add(t1.table.get(i).get(j));
-
-                }
-            }
-            //Add second table
-            for(int i = 0; i < t2.table.size(); i++)
-            {
-                for(int j = 1; j < t2.table.get(i).size(); j++)
-                {
-                    t3.table.get(i).add(t2.table.get(i).get(j));
-                }
-            }
-        }
-        return t3;
-    }
-
-    public void deleteRow(int index)
-    {
-        for(int i = 0; i < table.size(); i++)
-        {
-            table.get(i).remove(index);
-        }
     }
 
     public Table delete(String name, Table<T> t, String[] relationName)
@@ -169,9 +190,99 @@ public class Table<T> {
                             table.get(k).remove(j);
                         }
                     }
+
                 }
             }
         }
         return t;
     }
+
+    boolean condition(int f, String cond, int s) {
+        if(cond == ">") {
+            return (f > s);
+        }
+        else if (cond == "<") {
+            return (f < s);
+        }
+        else if (cond == "!=") {
+            return (f != s);
+        }
+        else if(cond == ">=") {
+            return (f >= s);
+        }
+        else if(cond == "<=") {
+            return (f <= s);
+        }
+        else {
+            return false;
+        }
+    }
+
+    public Table<T> select(String header, String cond, String headerComp)
+    {
+        ArrayList<String> headerCol = new ArrayList<>();
+        ArrayList<String> headerColComp = new ArrayList<>();
+        Table<T> newTable = new Table<>(this.table.size());
+        newTable.insertRow(this.getRow(0));
+
+        for(ArrayList<T> col : this.table)
+        {
+            if(col.get(0) == header)
+            {
+                headerCol = (ArrayList<String>) col.clone();
+            }
+            else if(col.get(0) == headerComp)
+            {
+                headerColComp = (ArrayList<String>) col.clone();
+            }
+        }
+        for(int i = 1; i < headerCol.size(); i++)
+        {
+            if(condition(headerCol.get(i), cond, headerColComp.get(i)))
+            {
+                newTable.insertRow(this.getRow(i));
+            }
+        }
+        return newTable;
+    }
+
+    boolean condition(String f, String cond, String s)
+    {
+        //Compare two strings
+        if(cond.equals("=="))
+        {
+            return f.equals(s);
+        }
+        else if(cond.equals("!="))
+        {
+            return !f.equals(s);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public Table<T> select(String header, String cond, int number) {
+        int numHeaders = this.table.size();
+        Table<T> tableWithCond = new Table<T>(numHeaders);
+        for (int i = 0; i < table.size(); i++) {
+
+            for (int j = 0; j < table.get(i).size(); j++) {
+
+                if (table.get(i).get(j) == header) {
+                    tableWithCond.insertRow(getRow(0));
+                    for (int x = j+1; x < table.get(i).size(); x++) {
+                        boolean b = condition((Integer) table.get(i).get(x), cond, number);
+                        if(b)
+                        {
+                            tableWithCond.insertRow(getRow(x));
+                        }
+                    }
+                }
+            }
+        }
+        return tableWithCond;
+    }
+
 }
