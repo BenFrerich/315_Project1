@@ -156,4 +156,37 @@ public class Dbms<T> {
         return t3;
     }
 
+    public Table product(Table<T> t1, Table<T> t2) {
+
+        int numOfLabels;
+        numOfLabels = t1.table.size() + t2.table.size();
+
+
+        // make new table of size needed
+        Table<T> temp = new Table<>(numOfLabels);
+        ArrayList<T> labels = new ArrayList<>();
+
+        //System.out.println(t2.getRow(0));
+        //temp.insertRow(t1.getRow(0));
+        labels = t1.getRow(0);
+        labels.addAll(t2.getRow(0));
+        temp.insertRow(labels);
+        //System.out.println(t1.getRowCount());
+
+        ArrayList<T> tempForRows = new ArrayList<>();
+        int row = 0;
+        for (int i = 1; i < t1.getRowCount(); i++) {
+            for (int j = 1; j < t2.getRowCount(); j++) {
+                tempForRows = t1.getRow(i);
+                tempForRows.addAll(t2.getRow(j));
+                row++;
+                temp.insertRow(tempForRows);
+                System.out.println(tempForRows);
+                System.out.println(row);
+            }
+        }
+
+        return temp;
+    }
+
 }
