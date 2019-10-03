@@ -1,6 +1,6 @@
 package project1.antlr4;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
-import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
+//import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
+//import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import org.antlr.v4.runtime.tree.ParseTree;
 import project1.Dbms;
 import project1.Table;
@@ -14,15 +14,35 @@ public class MyRulesBaseListener extends RulesBaseListener{
     @Override public void exitCreate_cmd(RulesParser.Create_cmdContext ctx) {
         ParseTree relationNameNode = ctx.getChild(1);
         ParseTree attributeListNode = ctx.getChild(3);
-        //ParseTree primaryKeysNode = ctx.getChild(7);
+        ParseTree primaryKeysNode = ctx.getChild(7);
         ArrayList<String> attributeListLeaves = new ArrayList<>(Arrays.asList(attributeListNode.getText().split(", ")));
+        ArrayList<String> newAttributeListLeaves = new ArrayList<>();
+        ArrayList<String> primaryKeys = new ArrayList<>(Arrays.asList(primaryKeysNode.getText().split(", ")));
         Table temp = new Table(attributeListLeaves.size());
-        temp.insertRow(attributeListLeaves);
+        temp.setPrimaryKey(primaryKeys);
+        for(String s : attributeListLeaves)
+        {
+            if(s.contains("VARCHAR"))
+            {
+                int i = s.indexOf("VARCHAR");
+                temp.addHeaderType(s.substring(i));
+                s = s.substring(0,i);
+            }
+            else if(s.contains("INTEGER"))
+            {
+                int i = s.indexOf("INTEGER");
+                temp.addHeaderType(s.substring(i));
+                s = s.substring(0,i);
+            }
+            newAttributeListLeaves.add(s);
+        }
+        temp.insertRow(newAttributeListLeaves);
         myDbms.addTable(relationNameNode.getText(), temp);
         //myDbms.printDataBase(relationNameNode.getText());
     }
     @Override public void exitUnion(RulesParser.UnionContext ctx) {
-        //ParseTree relationNameNode = ctx.getChild(1);
+        ParseTree tableOneNode = ctx.getChild(0);
+        ParseTree tableTwoNode = ctx.getChild(2);
         for (int i = 0; i < ctx.getChildCount(); i++) {
             System.out.println(ctx.getChild(i).getText());
         }
@@ -33,7 +53,7 @@ public class MyRulesBaseListener extends RulesBaseListener{
         List<String> conditionLeaves = new ArrayList<>();
         getLeafNodes(conditionNode,conditionLeaves);
         Deque<String> conditionOpStack = new ArrayDeque<>();
-        Queue<String> condtionQueue = new LinkedList<>();
+        Queue<String> conditionQueue = new LinkedList<>();
         Queue<String> conditionClone = new LinkedList<>();
         for (String leaf : conditionLeaves) {
             if(isConditionOp(leaf))
@@ -43,7 +63,7 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 {
                     if(!top.equals("&&") && !top.equals("||") && !top.equals("(") && !top.equals(")"))
                     {
-                        condtionQueue.add(conditionOpStack.getFirst());
+                        conditionQueue.add(conditionOpStack.getFirst().replace("\"",""));
                         conditionClone.add(conditionOpStack.pop());
                     }
                 }
@@ -51,7 +71,7 @@ public class MyRulesBaseListener extends RulesBaseListener{
             }
             else
             {
-                condtionQueue.add(leaf);
+                conditionQueue.add(leaf.replace("\"",""));
                 conditionClone.add(leaf);
             }
         }
@@ -60,14 +80,14 @@ public class MyRulesBaseListener extends RulesBaseListener{
             String value = conditionOpStack.pop();
             if(!value.equals("(") && !value.equals(")"))
             {
-                condtionQueue.add(value);
-                conditionClone.add(value);
+                conditionQueue.add(value.replace("\"",""));
+                conditionClone.add(value.replace("\"",""));
             }
         }
         //System.out.println(conditionLeaves);
         //System.out.println(conditionOpStack);
-        System.out.println("Condition Queue");
-        System.out.println(condtionQueue);
+        //System.out.println("Condition Queue");
+        //System.out.println(conditionQueue);
         List<String> expresionLeaves = new ArrayList<>();
         getLeafNodes(expresionNode, expresionLeaves);
         Deque<String> expressionOpStack = new ArrayDeque<>();
@@ -95,8 +115,8 @@ public class MyRulesBaseListener extends RulesBaseListener{
         }
         //System.out.println(expresionLeaves);
         //System.out.println(expressionOpStack);
-        System.out.println("Expression Queue");
-        System.out.println(expressionQueue);
+        //System.out.println("Expression Queue");
+        //System.out.println(expressionQueue);
         for (String item : cloneExpression) {
             if (isExpressionOp(item)) {
                 String secItem = listenerStack.pop();
@@ -113,8 +133,13 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 listenerStack.push(expressionQueue.remove());
             }
         }
+        Table pullFromTable;
+        if(myDbms.tempStack.isEmpty())
+        {
+            pullFromTable = (Table)myDbms.dataBase.get(listenerStack.peek());
+        }
+        else{ pullFromTable = (Table) myDbms.tempStack.pop(); }
         listenerStack.clear();
-        Table pullFromTable = (Table) myDbms.tempStack.pop();
         for (String item : conditionClone) {
             if (isConditionOp(item)) {
                 if (item.equals("&&") || item.equals("||")) {
@@ -127,12 +152,13 @@ public class MyRulesBaseListener extends RulesBaseListener{
                     String firstItem = listenerStack.pop();
                     myDbms.tempStack.push(computeCondition(item, secItem, firstItem, pullFromTable));
                 }
+                conditionQueue.remove();
             }
             else {
-                listenerStack.push(condtionQueue.remove());
+                listenerStack.push(conditionQueue.remove());
             }
         }
-        System.out.println(myDbms.tempStack.peek());
+        //System.out.println(myDbms.tempStack.peek());
     }
     @Override public void exitQuery(RulesParser.QueryContext ctx) {
 //        for (int i = 0; i < ctx.getChildCount(); i++) {
@@ -156,15 +182,15 @@ public class MyRulesBaseListener extends RulesBaseListener{
             else
             {
                 if(!ctx.getChild(i).getText().contains(",")) {
-                    valuesInserting.add(ctx.getChild(i).getText());
+                    valuesInserting.add(ctx.getChild(i).getText().replace("\"",""));
                 }
             }
         }
+        //myDbms.printDataBaseAll();
         myDbms.getTable(entityInsertInto.getText()).insertRow((ArrayList) valuesInserting);
-        //myDbms.printDataBaseTest();
     }
     @Override public void exitShow_cmd(RulesParser.Show_cmdContext ctx) {
-        myDbms.printDataBase(ctx.getChild(1).getText());
+        myDbms.printDataBaseTable(ctx.getChild(1).getText());
     }
     public void getLeafNodes(ParseTree node, List<String> leaves)
     {
@@ -198,7 +224,7 @@ public class MyRulesBaseListener extends RulesBaseListener{
     }
     public Table computeExpression(String op, Table first, Table second) {
         Table temp = new Table();
-        temp.name = "temp";
+        temp.setName("temp");
         if (op.equals("+")) {
             temp = myDbms.union(first, second);
             temp.printTable();
@@ -214,13 +240,15 @@ public class MyRulesBaseListener extends RulesBaseListener{
     public Table computeCondition(String op, String first, String second, Table pullFrom) {
         Table temp = new Table();
         int n;
-        if(isInteger(second)) {
-            n = Integer.parseInt(second);
-        }
         if(op.equals("==")) {
             if(isInteger(second)) {
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
+            }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
             }
             else {
                 temp = pullFrom.select(second, op, first);
@@ -231,6 +259,11 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
             }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
+            }
             else {
                 temp = pullFrom.select(second, op, first);
             }
@@ -239,6 +272,11 @@ public class MyRulesBaseListener extends RulesBaseListener{
             if(isInteger(second)) {
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
+            }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
             }
             else {
                 temp = pullFrom.select(second, op, first);
@@ -249,6 +287,11 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
             }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
+            }
             else {
                 temp = pullFrom.select(second, op, first);
             }
@@ -258,6 +301,11 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
             }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
+            }
             else {
                 temp = pullFrom.select(second, op, first);
             }
@@ -266,6 +314,11 @@ public class MyRulesBaseListener extends RulesBaseListener{
             if(isInteger(second)) {
                 n = Integer.parseInt(second);
                 temp = pullFrom.select(first, op, n);
+            }
+            else if(isInteger(first))
+            {
+                n = Integer.parseInt(first);
+                temp = pullFrom.select(second, op, n);
             }
             else {
                 temp = pullFrom.select(second, op, first);
