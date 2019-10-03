@@ -1,17 +1,22 @@
 package project1;
 import java.security.PublicKey;
 import java.util.*;
-public class  Table<T> {
-    public String name;
+public class Table<T> {
+    private String name;
+    public ArrayList<String> headerType;
     public ArrayList<String> primaryKey;
     public  ArrayList<ArrayList<T>> table;
     public Table()
     {
-        table = new ArrayList<ArrayList<T>>();
+        this.table = new ArrayList<ArrayList<T>>();
+        this.headerType = new ArrayList<>();
+        this.primaryKey = new ArrayList<>();
     }
     public Table(int j)
     {
         this.table = new ArrayList<ArrayList<T>>();
+        this.headerType = new ArrayList<>();
+        this.primaryKey = new ArrayList<>();
         for (int i = 0; i < j; i++)
         {
             ArrayList<T> a = new ArrayList<T>();
@@ -21,8 +26,10 @@ public class  Table<T> {
     public Table(Table<T> t)
     {
         this.table = new ArrayList<ArrayList<T>>();
-        this.name = t.name;
-        this.primaryKey = t.primaryKey;
+        this.headerType = new ArrayList<>();
+        this.primaryKey = new ArrayList<>();
+        this.name = t.getName();
+        this.primaryKey = t.getPrimaryKeys();
         for(int i = 0; i < t.table.size(); i++)
         {
             table.add(new ArrayList<T>());
@@ -32,9 +39,25 @@ public class  Table<T> {
             }
         }
     }
+    public void setPrimaryKey(ArrayList<String> list)
+    {
+        this.primaryKey.addAll(list);
+    }
+    public void addHeaderType(String type)
+    {
+        this.headerType.add(type);
+    }
     public void setName(String name)
     {
         this.name = name;
+    }
+    public String getName()
+    {
+        return name;
+    }
+    public ArrayList<String> getPrimaryKeys()
+    {
+        return primaryKey;
     }
     public void insertRow(ArrayList<T> inputs)
     {
@@ -45,20 +68,6 @@ public class  Table<T> {
             i++;
         }
     }
-    public void insertCol(ArrayList<T> inputs)
-    {
-        table.add(inputs);
-    }
-    public void deleteRow(int index)
-    {
-        for(int i = 0; i < table.size(); i++)
-        {
-            table.get(i).remove(index);
-        }
-    }
-    public int getRowCount() {
-        return this.table.get(1).size();
-    }
     public ArrayList<T> getRow(int index)
     {
         ArrayList<T> row = new ArrayList<T>();
@@ -68,65 +77,16 @@ public class  Table<T> {
         }
         return  row;
     }
-    public void printTable()
+    public void deleteRow(int index)
     {
-        for (ArrayList<T> ts : table) {
-            for (T t : ts) {
-                System.out.print(t + " ");
-            }
-            System.out.println();
+        for(int i = 0; i < table.size(); i++)
+        {
+            table.get(i).remove(index);
         }
     }
-    public Table<T> select(String header, T key)
+    public void insertCol(ArrayList<T> inputs)
     {
-        int index = -1;
-        Table<T> temp = new Table<T>(this.table.size());
-        ArrayList<T> a = new ArrayList<T>();
-        ArrayList<Integer> b = new ArrayList<Integer>();
-        ArrayList<T> c = new ArrayList<T>();
-        for (ArrayList<T> tArrayList : this.table) {
-            a.add(tArrayList.get(0));
-        }
-        temp.insertRow(a);
-        for (int i = 0 ; i < table.size(); i++)
-        {
-            if(table.get(i).get(0) == header)
-            {
-                index = i;
-            }
-        }
-        if(index < 0)
-        {
-            System.out.println("Header Not Found!!");
-            return null;
-        }
-        else
-        {
-            for (int i = 1; i < table.get(index).size(); i++)
-            {
-                if(key == table.get(index).get(i))
-                {
-                    b.add(i);
-                }
-            }
-            for (int i = 0; i < b.size(); i++)
-            {
-                for (int j = 0; j < temp.table.size(); j++)
-                {
-                    c.add(this.table.get(j).get(b.get(i)));
-                }
-                temp.insertRow(c);
-                c.clear();
-            }
-            return temp;
-        }
-    }
-    public void SET(Integer index, T keys)
-    {
-        for(int i = 1; i < table.get(0).size(); i++)
-        {
-            table.get(index).set(i,keys);
-        }
+        table.add(inputs);
     }
     public ArrayList<T> project(String header) {
         ArrayList<T> colWanted = new ArrayList<T>();
@@ -137,62 +97,33 @@ public class  Table<T> {
         }
         return colWanted;
     }
-    public Table rename(String name, Table<T> t, ArrayList<String> header, ArrayList<String> newHeader) //  rename specified header(s)
+    public void printTable()
     {
-        for(int h = 0; h < header.size(); h++)
-        {
-            for(int i = 0; i < t.table.size(); i++)
-            {
-                for(int j = 1; j < t.table.get(i).size(); j++)
-                {
-                    if((String) table.get(i).get(0) == header.get(h))
-                    {
-                        table.get(i).set(0, (T) (newHeader.get(h)));
-                    }
-                }
+        for (ArrayList<T> ts : table) {
+            for (T t : ts) {
+                System.out.print(t + " ");
             }
+            System.out.println();
         }
-        return t;
     }
-    public Table delete(String name, Table<T> t, String[] relationName)
-    {
-        for(int h = 0; h < relationName.length; h++) // iterate through relationName list
-        {
-            for(int i = 0; i < t.table.size(); i++) //
-            {
-                for(int j = 1; j < t.table.get(i).size(); j++)
-                {
-                    if((String) table.get(i).get(j) == relationName[h])
-                    {
-                        for(int k = 0; k < table.size(); k++)
+    public Table<T> select(String header, String cond, int number) {
+        int numHeaders = this.table.size();
+        Table<T> tableWithCond = new Table<T>(numHeaders);
+        for (int i = 0; i < table.size(); i++) {
+            for (int j = 0; j < table.get(i).size(); j++) {
+                if (table.get(i).get(j).toString().replace(" ","").equals(header.toString().replace(" ",""))) {
+                    tableWithCond.insertRow(getRow(0));
+                    for (int x = j+1; x < table.get(i).size(); x++) {
+                        boolean b = condition(Integer.parseInt(table.get(i).get(x).toString()), cond, number);
+                        if(b)
                         {
-                            table.get(k).remove(j);
+                            tableWithCond.insertRow(getRow(x));
                         }
                     }
                 }
             }
         }
-        return t;
-    }
-    boolean condition(int f, String cond, int s) {
-        if(cond == ">") {
-            return (f > s);
-        }
-        else if (cond == "<") {
-            return (f < s);
-        }
-        else if (cond == "!=") {
-            return (f != s);
-        }
-        else if(cond == ">=") {
-            return (f >= s);
-        }
-        else if(cond == "<=") {
-            return (f <= s);
-        }
-        else {
-            return false;
-        }
+        return tableWithCond;
     }
     public Table<T> select(String header, String cond, String headerComp)
     {
@@ -202,7 +133,7 @@ public class  Table<T> {
         newTable.insertRow(this.getRow(0));
         for(ArrayList<T> col : this.table)
         {
-            if((String) col.get(0) == header)
+            if(col.get(0).toString().equals(header))
             {
                 headerCol = (ArrayList<String>) col.clone();
             }/*
@@ -213,7 +144,9 @@ public class  Table<T> {
         }
         for(int i = 1; i < headerCol.size(); i++)
         {
-            if(condition(headerCol.get(i), cond, headerComp) )
+            //System.out.println(headerCol.get(i).toString());
+            //System.out.println(headerCol.get(i).toString().replace("\"", ""));
+            if(condition(headerCol.get(i).toString().replace("\"",""), cond, headerComp) )
             {
                 newTable.insertRow(this.getRow(i));
             }
@@ -228,11 +161,11 @@ public class  Table<T> {
         newTable.insertRow(this.getRow(0));
         for(ArrayList<T> col : this.table)
         {
-            if(col.get(0) == header)
+            if(col.get(0).toString().equals(header))
             {
                 headerCol = (ArrayList<String>) col.clone();
             }
-            else if(col.get(0) == headerComp)
+            else if(col.get(0).toString().equals(headerComp))
             {
                 headerColComp = (ArrayList<String>) col.clone();
             }
@@ -262,23 +195,48 @@ public class  Table<T> {
             return false;
         }
     }
-    public Table<T> select(String header, String cond, int number) {
-        int numHeaders = this.table.size();
-        Table<T> tableWithCond = new Table<T>(numHeaders);
-        for (int i = 0; i < table.size(); i++) {
-            for (int j = 0; j < table.get(i).size(); j++) {
-                if (table.get(i).get(j) == header) {
-                    tableWithCond.insertRow(getRow(0));
-                    for (int x = j+1; x < table.get(i).size(); x++) {
-                        boolean b = condition((Integer) table.get(i).get(x), cond, number);
-                        if(b)
-                        {
-                            tableWithCond.insertRow(getRow(x));
-                        }
+    boolean condition(int f, String cond, int s) {
+        //compare two ints
+        if(cond.equals(">")) {
+            return (f > s);
+        }
+        else if (cond.equals("<")) {
+            return (f < s);
+        }
+        else if (cond.equals("!=")) {
+            return (f != s);
+        }
+        else if(cond.equals(">=")) {
+            return (f >= s);
+        }
+        else if(cond.equals("<=")) {
+            return (f <= s);
+        }
+        else if(cond.equals("==")) {
+            return (f == s);
+        }
+        else {
+            return false;
+        }
+    }
+    public Table rename(String name, Table<T> t, ArrayList<String> header, ArrayList<String> newHeader) //  rename specified header(s)
+    {
+        for(int h = 0; h < header.size(); h++)
+        {
+            for(int i = 0; i < t.table.size(); i++)
+            {
+                for(int j = 1; j < t.table.get(i).size(); j++)
+                {
+                    if((String) table.get(i).get(0) == header.get(h))
+                    {
+                        table.get(i).set(0, (T) (newHeader.get(h)));
                     }
                 }
             }
         }
-        return tableWithCond;
+        return t;
+    }
+    public int getRowCount() {
+        return this.table.get(1).size();
     }
 }
