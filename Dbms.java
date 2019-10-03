@@ -1,104 +1,63 @@
 package project1;
+import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.DelayQueue;
 public class Dbms<T> {
     public Deque<Table> tempStack = new ArrayDeque();
-    public HashMap<String, Table<T> > dataBase;
-    public Dbms()
-    {
+    public HashMap<String, Table<T>> dataBase;
+    public Dbms() {
         this.dataBase = new HashMap<String, Table<T>>();
     }
-    public void addTable(String name, Table<T> T)
-    {
+    public void addTable(String name, Table T) {
         this.dataBase.put(name, T);
-    }
-    public void printDataBaseTest()
-    {
-        for(Map.Entry<String, Table<T>> j : dataBase.entrySet())
-        {
-            System.out.println(j.getKey());
-            j.getValue().printTable();
-        }
     }
     public Table getTable(String name)
     {
         return this.dataBase.get(name);
     }
-    public ArrayList<T> removeDuplicates(ArrayList<T> list) {
-        ArrayList<T> newList = new ArrayList<T>();
-        for (T item : list) {
-            if (!newList.contains(item)) { newList.add(item); }
+    public void printDataBaseAll() {
+        for (Map.Entry<String, Table<T>> j : dataBase.entrySet()) {
+            System.out.println(j.getKey());
+            j.getValue().printTable();
         }
-        return newList;
+        System.out.println();
     }
-    public void printDataBase(String name)
-    {
+    public void printDataBaseTable(String name) {
         System.out.println(name);
         this.dataBase.get(name).printTable();
+        System.out.println();
     }
-    public void deleteTable(String name)
-    {
+    public void deleteTable(String name) {
         this.dataBase.remove(name);
     }
-    public void update(String name, String header, T keys,T newKey)
+    public Table intersect(Table<T> t1, Table<T> t2)
     {
-        int index = -1;
-        ArrayList<T> inputs = new ArrayList<T>();
-        Table<T> temp = dataBase.get(name).select(header,keys);
-        for(int i = 0; i < temp.table.size(); i++)
+        Table<T> t3 = new Table<T>();
+        if(t1.table.size() != t2.table.size())
         {
-            if(header == temp.table.get(i).get(0))
-            {
-                index = i;
-            }
+            System.out.println("Cannot intersect these tables, they contain a different number of columns");
         }
-        temp.SET(index, newKey);
-        for(int i = 1; i < dataBase.get(name).table.get(0).size(); i++)
+        else
         {
-            for(int j = 1; j < temp.table.get(0).size(); j++)
+            //Headers
+            for(int i = 0; i < t1.table.size(); i++)
             {
-                int m = 1;
-                for(int z = 0; z < temp.table.size(); z++)
+                t3.table.add(new ArrayList<T>());
+                t3.table.get(i).add(t1.table.get(i).get(0));
+            }
+            for(int i = 1; i < t1.table.size(); i++)
+            {
+                for(int j = 1; j < t2.table.size(); j++)
                 {
-                    if(dataBase.get(name).table.get(z).get(i) == temp.table.get(z).get(j))
+                    if(compareRows(t1.getRow(i), t2.getRow(j)))
                     {
-                        m++;
-                    }
-                    if (m == temp.table.size())
-                    {
-                        dataBase.get(name).deleteRow(i);
+                        //t3.table.add(new ArrayList<T>());
+                        t3.insertRow(t1.getRow(i));
                     }
                 }
             }
         }
-        for (int i = 1; i < temp.table.get(0).size(); i++)
-        {
-            for (int j = 0; j < temp.table.size(); j++)
-            {
-                inputs.add(temp.table.get(j).get(i));
-            }
-            dataBase.get(name).insertRow(inputs);
-            inputs.clear();
-        }
-    }
-    public void insertCommand(String toTable, ArrayList<T> row) {
-        this.dataBase.get(toTable).insertRow(row);
-    }
-    public void insertCommand(String toTable, String fromTable, ArrayList<String> headers) {
-        //need to call project (maybe a few times for each string in headers
-        for (int toTableIndex = 0; toTableIndex < this.dataBase.get(toTable).table.size(); toTableIndex++) {
-            for (int i = 0; i < headers.size(); i++) {
-                ArrayList<T> itemsToInsert = new ArrayList<T>();
-                for (int j = 0; j < this.dataBase.get(fromTable).table.size(); j++) {
-                    if (headers.get(i) == this.dataBase.get(fromTable).table.get(j).get(0)) {
-                        // get items that we need to insert items into col
-                        itemsToInsert = this.dataBase.get(fromTable).project(headers.get(i));
-                        ArrayList<T> noDups = removeDuplicates(itemsToInsert);
-                        this.dataBase.get(toTable).table.set(toTableIndex, noDups);
-                        break;
-                    }
-                }
-            }
-        }
+        return t3;
     }
     public Table union(Table<T> t1, Table<T> t2)
     {
@@ -133,6 +92,56 @@ public class Dbms<T> {
         }
         return t3;
     }
+    public boolean compareRows(ArrayList<T> a1, ArrayList<T> a2)
+    {
+        for(int i = 0; i < a1.size(); i++)
+        {
+            if(a1.get(i) != a2.get(i))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    public Table<T> difference(Table<T> t1, Table<T> t2)
+    {
+        Table<T> t3 = new Table<T>(t1);
+        boolean delete = false;
+        for(int i = 1; i < t1.table.get(0).size(); i++)
+        {
+            ArrayList<T> row = t1.getRow(i);
+            for(int j = 1; j < t2.table.get(0).size(); j++)
+            {
+                ArrayList<T> cRow = t2.getRow(i);
+                if(compareRows(row, cRow))
+                {
+                    delete = true;
+                }
+            }
+            if(delete)
+            {
+                t3.deleteRow(i);
+            }
+        }
+        return t3;
+    }
+    public void insertCommand(String toTable, String fromTable, ArrayList<String> headers) {
+        //need to call project (maybe a few times for each string in headers
+        for (int i = 0; i < headers.size(); i++) {
+            ArrayList<T> itemsToInsert = new ArrayList<T>();
+            for (int j = 0; j < this.dataBase.get(fromTable).table.size(); j++) {
+                if (headers.get(i) == this.dataBase.get(fromTable).table.get(j).get(0)) {
+                    // get items that we need to insert items into col
+                    itemsToInsert = this.dataBase.get(fromTable).project(headers.get(i));
+                    this.dataBase.get(toTable).table.set(j, itemsToInsert);
+                    break;
+                }
+            }
+        }
+    }
+    public void insertCommand(String toTable, ArrayList<T> row) {
+        this.dataBase.get(toTable).insertRow(row);
+    }
     public Table product(Table<T> t1, Table<T> t2) {
         int numOfLabels;
         numOfLabels = t1.table.size() + t2.table.size();
@@ -158,67 +167,5 @@ public class Dbms<T> {
             }
         }
         return temp;
-    }
-    public Table<T> difference(Table<T> t1, Table<T> t2)
-    {
-        Table<T> t3 = new Table<T>(t1);
-        boolean delete = false;
-        for(int i = 1; i < t1.table.get(0).size(); i++)
-        {
-            ArrayList<T> row = t1.getRow(i);
-            for(int j = 1; j < t2.table.get(0).size(); j++)
-            {
-                ArrayList<T> cRow = t2.getRow(i);
-                if(compareRows(row, cRow))
-                {
-                    delete = true;
-                }
-            }
-            if(delete)
-            {
-                t3.deleteRow(i);
-            }
-        }
-        return t3;
-    }
-    public boolean compareRows(ArrayList<T> a1, ArrayList<T> a2)
-    {
-        for(int i = 0; i < a1.size(); i++)
-        {
-            if(a1.get(i) != a2.get(i))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    public Table intersect(Table<T> t1, Table<T> t2)
-    {
-        Table<T> t3 = new Table<T>();
-        if(t1.table.size() != t2.table.size())
-        {
-            System.out.println("Cannot intersect these tables, they contain a different number of columns");
-        }
-        else
-        {
-            //Headers
-            for(int i = 0; i < t1.table.size(); i++)
-            {
-                t3.table.add(new ArrayList<T>());
-                t3.table.get(i).add(t1.table.get(i).get(0));
-            }
-            for(int i = 0; i < t1.table.size(); i++)
-            {
-                for(int j = 0; j < t2.table.size(); j++)
-                {
-                    if(compareRows(t1.getRow(i), t2.getRow(j)))
-                    {
-                        t3.table.add(new ArrayList<T>());
-                        t3.insertRow(t1.getRow(i));
-                    }
-                }
-            }
-        }
-        return t3;
     }
 }
