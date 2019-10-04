@@ -162,8 +162,8 @@ public class Dbms<T> {
                 tempForRows.addAll(t2.getRow(j));
                 row++;
                 temp.insertRow(tempForRows);
-                System.out.println(tempForRows);
-                System.out.println(row);
+//                System.out.println(tempForRows);
+//                System.out.println(row);
             }
         }
         return temp;

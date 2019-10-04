@@ -1,4 +1,5 @@
 package project1;
+import java.lang.reflect.Array;
 import java.security.PublicKey;
 import java.util.*;
 public class Table<T> {
@@ -36,6 +37,14 @@ public class Table<T> {
             for(int j = 0; j < t.table.get(0).size(); j++)
             {
                 table.get(i).add(t.table.get(i).get(j));
+            }
+        }
+    }
+    public void copyTable(Table t1) {
+        if (this.table.size() == t1.table.size()) {
+            for (Object col : t1.table) {
+                this.table.clear();
+                this.insertCol((ArrayList<T>) col);
             }
         }
     }
@@ -91,7 +100,7 @@ public class Table<T> {
     public ArrayList<T> project(String header) {
         ArrayList<T> colWanted = new ArrayList<T>();
         for (ArrayList<T> cols : table) {
-            if (cols.get(0) == header) {
+            if (cols.get(0).equals(header)) {
                 colWanted = (ArrayList<T>) cols.clone();
             }
         }
@@ -219,7 +228,7 @@ public class Table<T> {
             return false;
         }
     }
-    public Table rename(String name, Table<T> t, ArrayList<String> header, ArrayList<String> newHeader) //  rename specified header(s)
+    public Table rename(Table<T> t, ArrayList<String> header, ArrayList<String> newHeader) //  rename specified header(s)
     {
         for(int h = 0; h < header.size(); h++)
         {
@@ -227,7 +236,7 @@ public class Table<T> {
             {
                 for(int j = 1; j < t.table.get(i).size(); j++)
                 {
-                    if((String) table.get(i).get(0) == header.get(h))
+                    if(table.get(i).get(0).equals(header.get(h)))
                     {
                         table.get(i).set(0, (T) (newHeader.get(h)));
                     }
