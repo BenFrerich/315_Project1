@@ -1,9 +1,15 @@
 package project1.antlr4;
 //import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 //import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
+import com.google.gson.Gson;
 import org.antlr.v4.runtime.tree.ParseTree;
 import project1.Dbms;
 import project1.Table;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.SQLOutput;
 import java.util.*;
 public class MyRulesBaseListener extends RulesBaseListener{
     public static Dbms myDbms = new Dbms();
@@ -43,9 +49,22 @@ public class MyRulesBaseListener extends RulesBaseListener{
     @Override public void exitUnion(RulesParser.UnionContext ctx) {
         ParseTree tableOneNode = ctx.getChild(0);
         ParseTree tableTwoNode = ctx.getChild(2);
-        for (int i = 0; i < ctx.getChildCount(); i++) {
-            System.out.println(ctx.getChild(i).getText());
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//            System.out.println(ctx.getChild(i).getText());
+//        }
+        if (myDbms.dataBase.containsKey(tableTwoNode) && myDbms.dataBase.containsKey(tableOneNode.getText())) {
+            myDbms.tempStack.push(myDbms.union((Table) myDbms.dataBase.get(tableOneNode.getText()), (Table) myDbms.dataBase.get(tableTwoNode.getText())));
         }
+        else if (myDbms.dataBase.containsKey(tableOneNode.getText())) { // tableOneNode found in database
+            myDbms.tempStack.push(myDbms.union((Table) myDbms.dataBase.get(tableOneNode.getText()), (Table) myDbms.tempStack.pop()));
+        }
+        else if(myDbms.dataBase.containsKey(tableTwoNode)) { //tableTwoNode found in database
+            myDbms.tempStack.push(myDbms.union((Table) myDbms.tempStack.pop(), (Table) myDbms.dataBase.get(tableOneNode.getText())));
+        }
+        else { // none in database
+            myDbms.tempStack.push(myDbms.union((Table) myDbms.tempStack.pop(), (Table) myDbms.tempStack.pop()));
+        }
+
     }
     @Override public void exitSelection(RulesParser.SelectionContext ctx) {
         ParseTree conditionNode = ctx.getChild(2);
@@ -164,33 +183,180 @@ public class MyRulesBaseListener extends RulesBaseListener{
 //        for (int i = 0; i < ctx.getChildCount(); i++) {
 //            System.out.println(ctx.getChild(i).getText());
 //        }
+
         ParseTree itemNode = ctx.getChild(0);
         String tableName = itemNode.getText();
-        Table fromTempStack = (Table) myDbms.tempStack.pop();
-        fromTempStack.setName(tableName);
-        myDbms.addTable(tableName, fromTempStack);
+        ParseTree notFirstName = ctx.getChild(2);
+        String notFirst = notFirstName.getText();
+
+        //System.out.println(tableName);
+        if(myDbms.dataBase.containsKey(tableName)) { //if answer exists in database
+            if (myDbms.dataBase.containsKey(notFirst)) {
+                myDbms.tempStack.push(myDbms.dataBase.get(notFirst));
+                Table fromTempStack = (Table) myDbms.tempStack.pop();
+                fromTempStack.setName(tableName);
+                myDbms.addTable(tableName, fromTempStack);
+            }
+            else {
+                Table fromTempStack = (Table) myDbms.tempStack.pop();
+                fromTempStack.setName(tableName);
+                myDbms.addTable(tableName, fromTempStack);
+            }
+        }
+        else { //doesnt
+            if (myDbms.dataBase.containsKey(notFirst)) { //common names is in database
+                myDbms.tempStack.push(myDbms.dataBase.get(notFirst));
+                Table fromTempStack = (Table) myDbms.tempStack.pop();
+                fromTempStack.setName(tableName);
+                myDbms.addTable(tableName, fromTempStack);
+            }
+            else {
+                Table fromTempStack = (Table) myDbms.tempStack.pop();
+                fromTempStack.setName(tableName);
+                myDbms.addTable(tableName, fromTempStack);
+            }
+        }
     }
     @Override public void exitInsert_cmd(RulesParser.Insert_cmdContext ctx) {
         ParseTree entityInsertInto = ctx.getChild(1);   //table that you are inserting into
+        ParseTree typeOfInsert = ctx.getChild(2);
         List<Object> valuesInserting = new ArrayList<Object>();
-        for(int i = 4; i < ctx.getChildCount(); i++)
-        {
-            if(ctx.getChild(i).getText().equals(")"))
-            {
-                break;
-            }
-            else
-            {
-                if(!ctx.getChild(i).getText().contains(",")) {
-                    valuesInserting.add(ctx.getChild(i).getText().replace("\"",""));
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//            System.out.println(ctx.getChild(i).getText());
+//        }
+
+        // VALUES FROM RELATION
+        if(typeOfInsert.getText().contains("RELATION")) {
+            myDbms.getTable(entityInsertInto.getText()).copyTable((Table) myDbms.tempStack.pop());
+        }
+        else { // VALUES FROM
+
+            for (int i = 4; i < ctx.getChildCount(); i++) {
+                if (ctx.getChild(i).getText().equals(")")) {
+                    break;
+                } else {
+                    if (!ctx.getChild(i).getText().contains(",")) {
+                        valuesInserting.add(ctx.getChild(i).getText().replace("\"", ""));
+                    }
                 }
             }
+            //myDbms.printDataBaseAll();
+            myDbms.getTable(entityInsertInto.getText()).insertRow((ArrayList) valuesInserting);
         }
-        //myDbms.printDataBaseAll();
-        myDbms.getTable(entityInsertInto.getText()).insertRow((ArrayList) valuesInserting);
     }
     @Override public void exitShow_cmd(RulesParser.Show_cmdContext ctx) {
         myDbms.printDataBaseTable(ctx.getChild(1).getText());
+    }
+    @Override public void exitRenaming(RulesParser.RenamingContext ctx) {
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//            System.out.println(ctx.getChild(i).getText());
+//        }
+
+        ParseTree renameNodes = ctx.getChild(2);
+        ArrayList<String> renameNodesList = new ArrayList<>(Arrays.asList(renameNodes.getText().split(", ")));
+        //System.out.println(renameNodesList);
+
+        Table temp = (Table) myDbms.tempStack.pop();
+        ArrayList<String> headersToReplace = new ArrayList<>();
+        for (int i = 0; i < temp.table.size(); i++) {
+            headersToReplace.add((String) temp.getRow(0).get(i));
+        }
+        //System.out.println(headersToReplace);
+        //temp.printTable();
+        temp.rename(temp, headersToReplace, renameNodesList);
+        myDbms.tempStack.push(temp);
+
+    }
+    @Override public void exitProjection(RulesParser.ProjectionContext ctx) {
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//            System.out.println(ctx.getChild(i).getText());
+//        }
+        ParseTree itemsNode = ctx.getChild(2);
+        ParseTree fromNode = ctx.getChild(4);
+
+        ArrayList<String> itemsNodeList = new ArrayList<>(Arrays.asList(itemsNode.getText().split(", ")));
+        //System.out.println(itemsNodeList);
+        Table temp = new Table();
+
+        if(myDbms.dataBase.containsKey(fromNode.getText())) { //in database
+            for (String s : itemsNodeList) {
+
+                temp.insertCol(myDbms.getTable(fromNode.getText()).project(s));
+            }
+        }
+        else { //not in database so in tempstack
+            for (String s : itemsNodeList) {
+                //get table from tempstack
+                Table fromTempStack = (Table) myDbms.tempStack.pop();
+                temp.insertCol(fromTempStack.project(s));
+            }
+        }
+        myDbms.tempStack.push(temp);
+    }
+    @Override public void exitProduct(RulesParser.ProductContext ctx) {
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//               System.out.println(ctx.getChild(i).getText());
+//        }
+
+        //ParseTree firstNode
+    }
+    @Override public void exitWrite_cmd(RulesParser.Write_cmdContext ctx) {
+//        for (int i = 0; i < ctx.getChildCount(); i++) {
+//            System.out.println(ctx.getChild(i).getText());
+//        }
+        ParseTree itemToWrite = ctx.getChild(1);
+        String tableName = itemToWrite.getText();
+        //System.out.println(itemToWrite.getText());
+        Gson json = new Gson();
+        String response = json.toJson(myDbms.dataBase.get(tableName));
+        //System.out.println(response);
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter("/Users/chrisspringstead/IdeaProjects/CSCE315_Project1/src/project1/" + tableName + ".db"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            writer.write(response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    @Override public void exitClose_cmd(RulesParser.Close_cmdContext ctx) {
+
+        ParseTree itemToWrite = ctx.getChild(1);
+        String tableName = itemToWrite.getText();
+        //System.out.println(itemToWrite.getText());
+        Gson json = new Gson();
+        String response = json.toJson(myDbms.dataBase.get(tableName));
+        //System.out.println(response);
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter("/Users/chrisspringstead/IdeaProjects/CSCE315_Project1/src/project1/" + tableName + ".db"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            writer.write(response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        myDbms.dataBase.remove(tableName);
+    }
+    @Override public void exitExit_cmd(RulesParser.Exit_cmdContext ctx) {
+        System.out.println("Session Terminated");
+        myDbms.dataBase.clear();
     }
     public void getLeafNodes(ParseTree node, List<String> leaves)
     {
@@ -251,7 +417,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+                    //System.out.println(pullFrom.getRow(0).get(i));
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         else if(op.equals("!=")) {
@@ -265,7 +444,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         else if(op.equals(">")) {
@@ -279,7 +471,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         else if(op.equals(">=")) {
@@ -293,7 +498,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         else if(op.equals("<")) {
@@ -307,7 +525,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         else if(op.equals("<=")) {
@@ -321,7 +552,20 @@ public class MyRulesBaseListener extends RulesBaseListener{
                 temp = pullFrom.select(second, op, n);
             }
             else {
-                temp = pullFrom.select(second, op, first);
+                boolean firstFound = false;
+                boolean secondFound = false;
+                for (int i = 0; i < pullFrom.table.size(); i++) {
+
+                    if (first.equals(pullFrom.getRow(0).get(i))) {
+
+                        firstFound = true;
+                    }
+                    if (second.equals(pullFrom.getRow(0).get(i))) {
+                        secondFound = true;
+                    }
+                }
+                if (firstFound && secondFound){temp = pullFrom.selectHeader(second, op, first);}
+                else {temp = pullFrom.select(second, op, first);}
             }
         }
         return temp;
