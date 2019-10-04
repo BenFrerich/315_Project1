@@ -60,7 +60,7 @@ public class MyRulesBaseListener extends RulesBaseListener{
         ParseTree tableOneNode = ctx.getChild(0);
         ParseTree tableTwoNode = ctx.getChild(2);
 
-        if (myDbms.dataBase.containsKey(tableTwoNode) && myDbms.dataBase.containsKey(tableOneNode.getText())) {
+        if (myDbms.dataBase.containsKey(tableTwoNode.getText()) && myDbms.dataBase.containsKey(tableOneNode.getText())) {
             myDbms.tempStack.push(myDbms.union((Table) myDbms.dataBase.get(tableOneNode.getText()), (Table) myDbms.dataBase.get(tableTwoNode.getText())));
         }
         else if (myDbms.dataBase.containsKey(tableOneNode.getText())) { // tableOneNode found in database
