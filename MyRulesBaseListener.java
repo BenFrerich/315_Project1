@@ -79,7 +79,6 @@ public class MyRulesBaseListener extends RulesBaseListener{
     @Override public void exitSelection(RulesParser.SelectionContext ctx) {
         ParseTree conditionNode = ctx.getChild(2);
         ParseTree expresionNode = ctx.getChild(4);
-
         List<String> conditionLeaves = new ArrayList<>();
         getLeafNodes(conditionNode,conditionLeaves);
         Deque<String> conditionOpStack = new ArrayDeque<>();
